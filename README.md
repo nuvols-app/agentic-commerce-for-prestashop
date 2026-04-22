@@ -37,6 +37,8 @@ That's it. Your store is now AI-discoverable.
 - Business profile and discovery responses
 - Analytics dashboard
 - Spec version compliance
+- Marketing consent labels shown to shoppers at agent checkout
+- Seller-backed payment options (gift cards, store credit, saved cards, points)
 
 **Handled by the module (on your server):**
 - One-click connection to nuvols.app
@@ -45,6 +47,40 @@ That's it. Your store is now AI-discoverable.
 - Bulk enable/disable via product grid actions
 - Google Shopping feed rewriting
 - Discovery profile at `/.well-known/ucp`
+- Discount code resolution — AI-proposed codes are matched against your PrestaShop cart rules and applied to the cart
+- Marketing consent forwarded to a PrestaShop hook so your newsletter module can subscribe the shopper
+- Deep-link admin panels that open the nuvols.app dashboard for marketing-consent and seller-backed-payment configuration
+
+## Developer Hooks
+
+### Marketing consent
+
+When a shopper opts into marketing at AI-agent checkout, the module fires one hook per consent entry during order creation. The hook `actionNuvolsMarketingConsentGiven` is registered automatically on module install:
+
+```php
+Hook::exec('actionNuvolsMarketingConsentGiven', array(
+    'channel'  => $channel,   // e.g. 'marketing', 'newsletter'
+    'opted_in' => $opted_in,  // bool
+    'order_id' => $order_id,  // int
+    'order'    => $order,     // Order object
+));
+```
+
+Wire this into your mailing-list integration (Mailchimp, Sendinblue/Brevo, Klaviyo, etc.) from a module of your own:
+
+```php
+public function hookActionNuvolsMarketingConsentGiven($params)
+{
+    if (empty($params['opted_in'])) {
+        return;
+    }
+    $order = $params['order'];
+    $customer = new Customer((int) $order->id_customer);
+    // Subscribe $customer->email to your newsletter list
+}
+```
+
+`channel` identifies which opt-in was accepted (e.g. `marketing`, `newsletter`) as configured on the nuvols.app dashboard.
 
 ## Documentation
 
